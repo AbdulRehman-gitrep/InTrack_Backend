@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "strictPropertyInitialization": false
+  },
+  "include": ["src/database/data-source.ts", "src/entities/**/*.ts", "src/common/**/*.ts"]
+}
