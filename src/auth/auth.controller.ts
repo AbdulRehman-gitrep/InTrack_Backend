@@ -1,6 +1,6 @@
 import { Controller, Post, Get, Body, Req } from '@nestjs/common';
-import { AuthService } from '../services/auth.service';
-import { LoginDto } from '../dto/auth/login.dto';
+import { AuthService } from './auth.service';
+import { LoginDto } from './dto/login.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { ResponseMessage } from '../common/decorators/response-message.decorator';
 import { Throttle } from '@nestjs/throttler';

@@ -26,7 +26,7 @@ export class RolesGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{ user: JwtPayload }>();
     const user: JwtPayload = request.user;
 
-    if (!requiredRoles.includes(user.role as Role)) {
+    if (!requiredRoles.includes(user.role.toUpperCase() as Role)) {
       this.logger.warn(
         `Role denied: user=${user.email}, required=${requiredRoles.join(', ')}, actual=${user.role}`,
       );

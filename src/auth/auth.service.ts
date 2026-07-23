@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { UserStatus } from '../common/enums/user-status.enum';
-import { LoginDto } from '../dto/auth/login.dto';
+import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
 @Injectable()
@@ -87,6 +87,8 @@ export class AuthService {
       email: user.email,
       role: user.role.toLowerCase(),
       department: user.department,
+      isActive: user.status === UserStatus.ACTIVE,
+      createdAt: user.createdAt,
     };
   }
 }
