@@ -17,7 +17,7 @@ import { ActivityFilterDto } from './dto/activity-filter.dto';
 import type { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.ADMIN, Role.MANAGER, Role.BUDDY, Role.INTERN)
+@Roles(Role.ADMIN, Role.MANAGER)
 @Controller('activity')
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}

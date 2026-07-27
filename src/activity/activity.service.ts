@@ -56,10 +56,11 @@ export class ActivityService {
       .createQueryBuilder('activity')
       .leftJoinAndSelect('activity.user', 'user');
 
-    if (currentRole !== 'ADMIN') {
-      qb.andWhere('activity.userId = :currentUserId', {
-        currentUserId: requestUser.id,
-      });
+    if (currentRole === 'MANAGER') {
+      qb.innerJoin('user.internInfo', 'internInfo')
+        .andWhere('internInfo.managerId = :managerId', {
+          managerId: requestUser.id,
+        });
     }
 
     if (userId) {
@@ -115,11 +116,25 @@ export class ActivityService {
     }
 
     const currentRole = requestUser?.role.toUpperCase();
-    if (currentRole !== 'ADMIN' && activity.user.id !== requestUser?.id) {
-      throw new NotFoundException('Activity not found');
+    if (currentRole === 'ADMIN') {
+      return this.formatActivity(activity);
     }
 
-    return this.formatActivity(activity);
+    if (currentRole === 'MANAGER') {
+      const internInfo = await this.userRepository
+        .createQueryBuilder('user')
+        .innerJoin('user.internInfo', 'internInfo')
+        .where('user.id = :userId', { userId: activity.user.id })
+        .andWhere('internInfo.managerId = :managerId', { managerId: requestUser!.id })
+        .getOne();
+
+      if (!internInfo) {
+        throw new NotFoundException('Activity not found');
+      }
+      return this.formatActivity(activity);
+    }
+
+    throw new NotFoundException('Activity not found');
   }
 
   private formatActivity(activity: Activity) {
