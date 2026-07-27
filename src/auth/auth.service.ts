@@ -9,7 +9,10 @@ import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
+import { ActivityService } from '../activity/activity.service';
 import { UserStatus } from '../common/enums/user-status.enum';
+import { ActionType } from '../common/enums/action-type.enum';
+import { EntityType } from '../common/enums/entity-type.enum';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 
@@ -21,6 +24,7 @@ export class AuthService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly activityService: ActivityService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<User> {
@@ -50,6 +54,14 @@ export class AuthService {
     const accessToken = this.generateToken(user);
 
     this.logger.log(`User logged in: ${user.email} (${user.role})`);
+
+    await this.activityService.logActivity({
+      userId: user.id,
+      actionType: ActionType.LOGIN,
+      entityType: EntityType.AUTH,
+      entityId: user.id,
+      description: `User ${user.email} logged in`,
+    });
 
     return {
       token: accessToken,

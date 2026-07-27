@@ -14,7 +14,7 @@ export class FindAllUsersDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  limit?: number = 10;
+  limit?: number;
 
   @IsOptional()
   @IsEnum(Role)
@@ -31,4 +31,16 @@ export class FindAllUsersDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  managerId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  buddyId?: number;
 }

@@ -7,6 +7,9 @@ export function validateEnv(config: Record<string, unknown>) {
     'DB_DATABASE',
     'JWT_SECRET',
     'JWT_EXPIRES_IN',
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
   ];
 
   const missing = requiredVars.filter((key) => {

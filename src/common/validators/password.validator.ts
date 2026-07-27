@@ -8,10 +8,10 @@ import { PASSWORD } from '../constants/app.constants';
 @ValidatorConstraint({ name: 'passwordPolicy', async: false })
 export class PasswordPolicyValidator implements ValidatorConstraintInterface {
   validate(password: string): boolean {
-    if (!PASSWORD.REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) return false;
-    if (!PASSWORD.REQUIRE_LOWERCASE && !/[a-z]/.test(password)) return false;
-    if (!PASSWORD.REQUIRE_NUMBER && !/\d/.test(password)) return false;
-    if (!PASSWORD.REQUIRE_SPECIAL && !/[!@#$%^&*(),.?":{}|<>]/.test(password))
+    if (PASSWORD.REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) return false;
+    if (PASSWORD.REQUIRE_LOWERCASE && !/[a-z]/.test(password)) return false;
+    if (PASSWORD.REQUIRE_NUMBER && !/\d/.test(password)) return false;
+    if (PASSWORD.REQUIRE_SPECIAL && !/[!@#$%^&*(),.?\":{}|<>]/.test(password))
       return false;
     return true;
   }
