@@ -60,23 +60,28 @@ export class CloudinaryService {
       files.map((file) => this.uploadFile(file)),
     );
 
-    const uploaded: { secure_url: string; public_id: string }[] = [];
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        uploaded.push(result.value);
-      } else {
-        const reason = result.reason as Error | undefined;
-        this.logger.error(
-          `Batch upload failed: ${reason?.message ?? 'Unknown error'}`,
-        );
+    const failed = results.find((result) => result.status === 'rejected');
+    if (failed) {
+      const uploaded = results
+        .filter((result) => result.status === 'fulfilled')
+        .map((result) => result.value);
+      await Promise.all(
+        uploaded.map((file) => this.deleteFile(file.public_id)),
+      );
+
+      const reason = failed.reason as Error | undefined;
+      this.logger.error(
+        `Batch upload failed: ${reason?.message ?? 'Unknown error'}`,
+      );
+      throw new BadRequestException('One or more file uploads failed');
+    }
+
+    return results.map((result) => {
+      if (result.status !== 'fulfilled') {
+        throw new BadRequestException('One or more file uploads failed');
       }
-    }
-
-    if (uploaded.length === 0 && files.length > 0) {
-      throw new BadRequestException('All file uploads to Cloudinary failed');
-    }
-
-    return uploaded;
+      return result.value;
+    });
   }
 
   async deleteFile(publicId: string): Promise<void> {

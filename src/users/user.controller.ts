@@ -21,6 +21,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { FindAllUsersDto } from './dto/find-all-users.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import type { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,25 +31,39 @@ export class UserController {
 
   @Post()
   @Roles(Role.ADMIN)
-  @ResponseMessage(
-    'User created successfully. Credentials saved to credentials.json',
-  )
-  async create(@Body() dto: CreateUserDto) {
-    return this.userService.create(dto);
+  @ResponseMessage('User created successfully')
+  async create(@Body() dto: CreateUserDto, @Req() req: AuthenticatedRequest) {
+    return this.userService.create(dto, req.user);
   }
 
   @Get()
   @Roles(Role.ADMIN, Role.MANAGER, Role.BUDDY, Role.INTERN)
   @ResponseMessage('Users retrieved successfully')
-  async findAll(@Query() query: FindAllUsersDto) {
-    return this.userService.findAll(query);
+  async findAll(
+    @Query() query: FindAllUsersDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.userService.findAll(query, req.user);
   }
 
   @Get(':id')
   @Roles(Role.ADMIN, Role.MANAGER, Role.BUDDY, Role.INTERN)
   @ResponseMessage('User retrieved successfully')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.findOne(id);
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.userService.findOne(id, req.user);
+  }
+
+  @Patch('me/profile')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.BUDDY, Role.INTERN)
+  @ResponseMessage('Profile updated successfully')
+  async updateProfile(
+    @Body() dto: UpdateProfileDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.userService.updateProfile(req.user, dto);
   }
 
   @Patch(':id')
@@ -57,8 +72,9 @@ export class UserController {
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.userService.update(id, dto);
+    return this.userService.update(id, dto, req.user);
   }
 
   @Patch(':id/status')
@@ -67,8 +83,9 @@ export class UserController {
   async changeStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateUserStatusDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    return this.userService.changeStatus(id, dto);
+    return this.userService.changeStatus(id, dto, req.user);
   }
 
   @Delete(':id')

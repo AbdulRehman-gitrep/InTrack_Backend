@@ -18,19 +18,19 @@ export class InternInfo {
   @JoinColumn({ name: 'internId' })
   intern!: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'managerId' })
-  manager!: User;
+  manager!: User | null;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'buddyId' })
-  buddy!: User;
+  buddy!: User | null;
 
-  @Column({ type: 'date' })
-  internshipStartDate!: Date;
+  @Column({ type: 'date', nullable: true })
+  internshipStartDate!: Date | null;
 
-  @Column({ type: 'date' })
-  internshipEndDate!: Date;
+  @Column({ type: 'date', nullable: true })
+  internshipEndDate!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;

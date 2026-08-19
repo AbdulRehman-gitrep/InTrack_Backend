@@ -11,7 +11,7 @@ export class PasswordPolicyValidator implements ValidatorConstraintInterface {
     if (PASSWORD.REQUIRE_UPPERCASE && !/[A-Z]/.test(password)) return false;
     if (PASSWORD.REQUIRE_LOWERCASE && !/[a-z]/.test(password)) return false;
     if (PASSWORD.REQUIRE_NUMBER && !/\d/.test(password)) return false;
-    if (PASSWORD.REQUIRE_SPECIAL && !/[!@#$%^&*(),.?\":{}|<>]/.test(password))
+    if (PASSWORD.REQUIRE_SPECIAL && !/[!@#$%^&*(),.?":{}|<>]/.test(password))
       return false;
     return true;
   }

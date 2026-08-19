@@ -16,7 +16,14 @@ async function seed() {
   await pool.query(
     `INSERT INTO "users" ("fullName", "email", "password", "role", "status", "department")
      VALUES ($1, $2, $3, $4, $5, $6)`,
-    ['Admin', 'admin@intrack.com', hashedPassword, 'ADMIN', 'ACTIVE', 'Management'],
+    [
+      'Admin',
+      'admin@intrack.com',
+      hashedPassword,
+      'ADMIN',
+      'ACTIVE',
+      'Management',
+    ],
   );
 
   console.log('Admin user created: admin@intrack.com / Password123!');

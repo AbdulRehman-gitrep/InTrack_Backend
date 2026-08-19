@@ -41,6 +41,7 @@ export class TaskService {
   async create(dto: CreateTaskDto, user: JwtPayload) {
     const intern = await this.userRepository.findOne({
       where: { id: dto.internId },
+      relations: { internInfo: { manager: true } },
     });
 
     if (!intern) {
@@ -50,6 +51,7 @@ export class TaskService {
     if (intern.role !== Role.INTERN) {
       throw new BadRequestException('Assigned user must have role INTERN');
     }
+    this.ensureInternAssignment(intern, user);
 
     const manager = await this.userRepository.findOne({
       where: { id: user.id },
@@ -181,6 +183,8 @@ export class TaskService {
       throw new NotFoundException('Task not found');
     }
 
+    this.ensureTaskManagementAccess(task, user);
+
     if (dto.title !== undefined) task.title = dto.title;
     if (dto.description !== undefined) task.description = dto.description;
     if (dto.dueDate !== undefined) task.dueDate = new Date(dto.dueDate);
@@ -188,6 +192,7 @@ export class TaskService {
     if (dto.internId !== undefined) {
       const intern = await this.userRepository.findOne({
         where: { id: dto.internId },
+        relations: { internInfo: { manager: true } },
       });
       if (!intern) {
         throw new NotFoundException('Intern not found');
@@ -195,6 +200,7 @@ export class TaskService {
       if (intern.role !== Role.INTERN) {
         throw new BadRequestException('Assigned user must have role INTERN');
       }
+      this.ensureInternAssignment(intern, user);
       task.intern = intern;
     }
 
@@ -269,6 +275,8 @@ export class TaskService {
       throw new NotFoundException('Task not found');
     }
 
+    this.ensureTaskManagementAccess(task, user);
+
     await this.taskRepository.remove(task);
 
     await this.activityService.logActivity({
@@ -282,6 +290,27 @@ export class TaskService {
     this.logger.log(`Task deleted: ${task.title} (id=${id})`);
 
     return { id };
+  }
+
+  private ensureInternAssignment(intern: User, user: JwtPayload) {
+    const currentRole = user.role.toUpperCase() as Role;
+    if (currentRole === Role.ADMIN) return;
+    if (
+      currentRole !== Role.MANAGER ||
+      intern.internInfo?.manager?.id !== user.id
+    ) {
+      throw new ForbiddenException(
+        'You can only manage tasks for interns assigned to you',
+      );
+    }
+  }
+
+  private ensureTaskManagementAccess(task: Task, user: JwtPayload) {
+    const currentRole = user.role.toUpperCase() as Role;
+    if (currentRole === Role.ADMIN) return;
+    if (currentRole !== Role.MANAGER || task.manager?.id !== user.id) {
+      throw new ForbiddenException('You can only manage tasks you created');
+    }
   }
 
   private formatTask(task: Task) {

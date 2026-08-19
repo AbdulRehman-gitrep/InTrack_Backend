@@ -66,29 +66,44 @@ export class ReportService {
     }
 
     this.validateFiles(files);
+    const uploaded =
+      files.length > 0 ? await this.cloudinaryService.uploadFiles(files) : [];
 
-    const report = this.reportRepository.create({
-      title: dto.title,
-      description: dto.description,
-      intern,
-      status: ReportStatus.PENDING,
-    });
-
-    const savedReport = await this.reportRepository.save(report);
-
-    let attachments: ReportAttachment[] = [];
-    if (files.length > 0) {
-      const uploaded = await this.cloudinaryService.uploadFiles(files);
-      attachments = uploaded.map((file, index) =>
-        this.attachmentRepository.create({
-          report: savedReport,
-          fileName: files[index].originalname,
-          fileType: files[index].mimetype,
-          fileUrl: file.secure_url,
-          publicId: file.public_id,
-        }),
+    let savedReport: Report;
+    let attachments: ReportAttachment[];
+    try {
+      ({ savedReport, attachments } =
+        await this.reportRepository.manager.transaction(async (manager) => {
+          const reportRepository = manager.getRepository(Report);
+          const attachmentRepository = manager.getRepository(ReportAttachment);
+          const report = reportRepository.create({
+            title: dto.title,
+            description: dto.description,
+            intern,
+            status: ReportStatus.PENDING,
+          });
+          const saved = await reportRepository.save(report);
+          const savedAttachments = uploaded.map((file, index) =>
+            attachmentRepository.create({
+              report: saved,
+              fileName: files[index].originalname,
+              fileType: files[index].mimetype,
+              fileUrl: file.secure_url,
+              publicId: file.public_id,
+            }),
+          );
+          if (savedAttachments.length > 0) {
+            await attachmentRepository.save(savedAttachments);
+          }
+          return { savedReport: saved, attachments: savedAttachments };
+        }));
+    } catch (error) {
+      await Promise.all(
+        uploaded.map((file) =>
+          this.cloudinaryService.deleteFile(file.public_id),
+        ),
       );
-      await this.attachmentRepository.save(attachments);
+      throw error;
     }
 
     await this.activityService.logActivity({
@@ -170,7 +185,7 @@ export class ReportService {
       throw new NotFoundException('Report not found');
     }
 
-    this.validateAccess(report, user);
+    await this.validateAccess(report, user);
 
     return this.formatReport(report, report.attachments);
   }
@@ -197,6 +212,7 @@ export class ReportService {
     if (dto.title !== undefined) report.title = dto.title;
     if (dto.description !== undefined) report.description = dto.description;
 
+    let savedReport: Report;
     if (files.length > 0) {
       this.validateFiles(files);
 
@@ -208,20 +224,36 @@ export class ReportService {
       }
 
       const uploaded = await this.cloudinaryService.uploadFiles(files);
-      const newAttachments = uploaded.map((file, index) =>
-        this.attachmentRepository.create({
-          report,
-          fileName: files[index].originalname,
-          fileType: files[index].mimetype,
-          fileUrl: file.secure_url,
-          publicId: file.public_id,
-        }),
-      );
-      await this.attachmentRepository.save(newAttachments);
-      report.attachments = [...report.attachments, ...newAttachments];
+      try {
+        savedReport = await this.reportRepository.manager.transaction(
+          async (manager) => {
+            const attachmentRepository =
+              manager.getRepository(ReportAttachment);
+            const newAttachments = uploaded.map((file, index) =>
+              attachmentRepository.create({
+                report,
+                fileName: files[index].originalname,
+                fileType: files[index].mimetype,
+                fileUrl: file.secure_url,
+                publicId: file.public_id,
+              }),
+            );
+            await attachmentRepository.save(newAttachments);
+            report.attachments = [...report.attachments, ...newAttachments];
+            return manager.getRepository(Report).save(report);
+          },
+        );
+      } catch (error) {
+        await Promise.all(
+          uploaded.map((file) =>
+            this.cloudinaryService.deleteFile(file.public_id),
+          ),
+        );
+        throw error;
+      }
+    } else {
+      savedReport = await this.reportRepository.save(report);
     }
-
-    const savedReport = await this.reportRepository.save(report);
 
     await this.activityService.logActivity({
       userId: user.id,
@@ -292,6 +324,8 @@ export class ReportService {
       throw new BadRequestException('Report is already reviewed');
     }
 
+    await this.validateAccess(report, user);
+
     report.status = ReportStatus.REVIEWED;
     const savedReport = await this.reportRepository.save(report);
 
@@ -356,11 +390,25 @@ export class ReportService {
     }
   }
 
-  private validateAccess(report: Report, user: JwtPayload) {
+  private async validateAccess(report: Report, user: JwtPayload) {
     const currentRole = user.role.toUpperCase() as Role;
 
     if (currentRole === Role.INTERN && report.intern.id !== user.id) {
       throw new ForbiddenException('You can only view your own reports');
+    }
+    if (currentRole === Role.MANAGER || currentRole === Role.BUDDY) {
+      const relation = currentRole === Role.MANAGER ? 'managerId' : 'buddyId';
+      const assigned = await this.userRepository
+        .createQueryBuilder('intern')
+        .innerJoin('intern.internInfo', 'internInfo')
+        .where('intern.id = :internId', { internId: report.intern.id })
+        .andWhere(`internInfo.${relation} = :userId`, { userId: user.id })
+        .getExists();
+      if (!assigned) {
+        throw new ForbiddenException(
+          'You can only access reports from interns assigned to you',
+        );
+      }
     }
   }
 

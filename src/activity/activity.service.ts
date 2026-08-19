@@ -57,10 +57,10 @@ export class ActivityService {
       .leftJoinAndSelect('activity.user', 'user');
 
     if (currentRole === 'MANAGER') {
-      qb.innerJoin('user.internInfo', 'internInfo')
-        .andWhere('internInfo.managerId = :managerId', {
-          managerId: requestUser.id,
-        });
+      qb.leftJoin('user.internInfo', 'internInfo').andWhere(
+        '(activity.userId = :managerId OR internInfo.managerId = :managerId)',
+        { managerId: requestUser.id },
+      );
     }
 
     if (userId) {
@@ -121,11 +121,16 @@ export class ActivityService {
     }
 
     if (currentRole === 'MANAGER') {
+      if (activity.user.id === requestUser!.id) {
+        return this.formatActivity(activity);
+      }
       const internInfo = await this.userRepository
         .createQueryBuilder('user')
         .innerJoin('user.internInfo', 'internInfo')
         .where('user.id = :userId', { userId: activity.user.id })
-        .andWhere('internInfo.managerId = :managerId', { managerId: requestUser!.id })
+        .andWhere('internInfo.managerId = :managerId', {
+          managerId: requestUser!.id,
+        })
         .getOne();
 
       if (!internInfo) {

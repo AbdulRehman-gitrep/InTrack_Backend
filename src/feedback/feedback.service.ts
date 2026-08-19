@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,6 +39,20 @@ export class FeedbackService {
 
     if (receiver.role !== Role.INTERN) {
       throw new BadRequestException('Feedback can only be sent to interns');
+    }
+
+    const senderRole = user.role.toUpperCase() as Role;
+    const relation = senderRole === Role.MANAGER ? 'managerId' : 'buddyId';
+    const assigned = await this.userRepository
+      .createQueryBuilder('intern')
+      .innerJoin('intern.internInfo', 'internInfo')
+      .where('intern.id = :internId', { internId: receiver.id })
+      .andWhere(`internInfo.${relation} = :senderId`, { senderId: user.id })
+      .getExists();
+    if (!assigned) {
+      throw new ForbiddenException(
+        'You can only give feedback to interns assigned to you',
+      );
     }
 
     const sender = await this.userRepository.findOne({

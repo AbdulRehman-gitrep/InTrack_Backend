@@ -25,6 +25,16 @@ import { CreateReportDto } from './dto/create-report.dto';
 import { UpdateReportDto } from './dto/update-report.dto';
 import type { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 
+const uploadOptions = {
+  storage: memoryStorage(),
+  limits: {
+    files: 5,
+    fileSize: 50 * 1024 * 1024,
+    fields: 10,
+    fieldNameSize: 100,
+  },
+};
+
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('reports')
 export class ReportController {
@@ -32,7 +42,7 @@ export class ReportController {
 
   @Post()
   @Roles(Role.INTERN)
-  @UseInterceptors(FilesInterceptor('files', 5, { storage: memoryStorage() }))
+  @UseInterceptors(FilesInterceptor('files', 5, uploadOptions))
   @ResponseMessage('Report submitted successfully')
   async create(
     @Body() dto: CreateReportDto,
@@ -72,7 +82,7 @@ export class ReportController {
 
   @Patch(':id')
   @Roles(Role.INTERN)
-  @UseInterceptors(FilesInterceptor('files', 5, { storage: memoryStorage() }))
+  @UseInterceptors(FilesInterceptor('files', 5, uploadOptions))
   @ResponseMessage('Report updated successfully')
   async update(
     @Param('id', ParseIntPipe) id: number,
